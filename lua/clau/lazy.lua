@@ -49,5 +49,32 @@ require("lazy").setup({
       vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
     end,
   },
+
+  -- LSP Support
+  {
+    "williamboman/mason.nvim",
+    config = function()
+      require("mason").setup()
+    end,
+  },
+  {
+    "williamboman/mason-lspconfig.nvim",
+    dependencies = { "williamboman/mason.nvim" },
+    config = function()
+      require("mason-lspconfig").setup({
+        ensure_installed = { "ruff", "pyright", "ts_ls" },
+      })
+    end,
+  },
+  {
+    "neovim/nvim-lspconfig",
+    dependencies = {
+      "williamboman/mason.nvim",
+      "williamboman/mason-lspconfig.nvim",
+    },
+    config = function()
+      require("clau.lsp")
+    end,
+  },
 })
 
