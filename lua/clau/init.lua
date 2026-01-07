@@ -1,0 +1,5 @@
+require("clau.lazy")
+require("clau.remap")
+require("clau.telescope")
+require("clau.fugitive")
+print('clau')
