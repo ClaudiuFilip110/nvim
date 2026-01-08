@@ -53,17 +53,17 @@ install_dependencies() {
   case "${PKG_MANAGER}" in
     apt)
       $SUDO apt-get update -y
-      $SUDO apt-get install -y neovim git curl ripgrep fzf build-essential unzip
+      $SUDO apt-get install -y git curl ripgrep fzf build-essential unzip
       ;;
     dnf)
-      $SUDO dnf install -y neovim git curl ripgrep fzf gcc make unzip
+      $SUDO dnf install -y git curl ripgrep fzf gcc make unzip
       ;;
     pacman)
-      $SUDO pacman -Sy --needed --noconfirm neovim git curl ripgrep fzf base-devel unzip
+      $SUDO pacman -Sy --needed --noconfirm git curl ripgrep fzf base-devel unzip
       ;;
     zypper)
       $SUDO zypper refresh
-      $SUDO zypper install -y neovim git curl ripgrep fzf gcc make unzip
+      $SUDO zypper install -y git curl ripgrep fzf gcc make unzip
       ;;
     *)
       die "Package manager ${PKG_MANAGER} is not handled."
@@ -71,46 +71,22 @@ install_dependencies() {
   esac
 }
 
-get_nvim_version() {
-  if ! command -v nvim >/dev/null 2>&1; then
-    return
-  fi
-
-  local version
-  version="$(nvim --version | head -n1 | awk '{print $2}')"
-  version="${version#v}"
-  printf "%s" "${version}"
-}
-
-version_ge() {
-  # returns success when $1 >= $2
-  if [ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]; then
-    return 0
-  fi
-  return 1
-}
-
-install_nvim_appimage() {
+install_latest_nvim() {
   need_sudo
-  local tmp="/tmp/nvim.appimage.$$"
-  log "Downloading latest Neovim AppImage..."
-  curl -fsSL -o "${tmp}" https://github.com/neovim/neovim/releases/latest/download/nvim.appimage
-  chmod +x "${tmp}"
-  $SUDO mv "${tmp}" /usr/local/bin/nvim.appimage
-  $SUDO ln -sf /usr/local/bin/nvim.appimage /usr/local/bin/nvim
-  log "Installed Neovim AppImage to /usr/local/bin/nvim"
-}
+  local tmp_dir
+  tmp_dir="$(mktemp -d)"
+  trap 'rm -rf "${tmp_dir}"' RETURN
 
-ensure_modern_nvim() {
-  local current_version
-  current_version="$(get_nvim_version || true)"
-  if [ -n "${current_version}" ] && version_ge "${current_version}" "0.8.0"; then
-    log "Detected Neovim ${current_version}"
-    return
-  fi
+  local archive="${tmp_dir}/nvim-linux64.tar.gz"
+  log "Downloading latest Neovim release..."
+  curl -fsSL -o "${archive}" https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
+  tar -C "${tmp_dir}" -xzf "${archive}"
 
-  warn "Neovim 0.8+ is required. Installing the official AppImage..."
-  install_nvim_appimage
+  $SUDO rm -rf /usr/local/nvim-linux64
+  $SUDO mv "${tmp_dir}/nvim-linux64" /usr/local/
+  $SUDO ln -sf /usr/local/nvim-linux64/bin/nvim /usr/local/bin/nvim
+  $SUDO ln -sf /usr/local/nvim-linux64/bin/nvim /usr/local/bin/vi
+  log "Installed Neovim to /usr/local/nvim-linux64 (symlinked to /usr/local/bin/nvim)"
 }
 
 backup_existing_config() {
@@ -161,7 +137,7 @@ bootstrap_lazy() {
 main() {
   log "Installing base dependencies..."
   install_dependencies
-  ensure_modern_nvim
+  install_latest_nvim
   backup_existing_config
   sync_repo
   bootstrap_lazy
