@@ -55,34 +55,66 @@ version_ge() {
   return 1
 }
 
-install_nvim() {
+install_build_dependencies() {
   detect_package_manager
   need_sudo
   
-  log "Installing Neovim..."
+  log "Installing build dependencies..."
   case "${PKG_MANAGER}" in
     apt)
-      # Use unstable PPA for newer versions (>= 0.9.0)
-      if ! grep -q "ppa:neovim-ppa/unstable" /etc/apt/sources.list.d/*.list 2>/dev/null; then
-        log "Adding Neovim unstable PPA for version >= 0.9.0..."
-        $SUDO add-apt-repository -y ppa:neovim-ppa/unstable
-      else
-        log "Neovim unstable PPA already configured"
-      fi
       $SUDO apt-get update -y
-      $SUDO apt-get install -y neovim
+      $SUDO apt-get install -y git cmake make ninja-build gettext curl \
+        gcc g++ libtool libtool-bin autoconf automake pkg-config \
+        unzip libunibilium-dev libmsgpack-dev libvterm-dev \
+        libluajit-5.1-dev lua5.1 liblua5.1-dev
       ;;
     dnf)
-      $SUDO dnf install -y neovim
+      $SUDO dnf install -y git cmake make ninja-build gettext curl \
+        gcc gcc-c++ libtool autoconf automake pkg-config \
+        unzip libunibilium-devel msgpack-devel libvterm-devel \
+        luajit-devel lua-devel
       ;;
     pacman)
-      $SUDO pacman -Sy --needed --noconfirm neovim
+      $SUDO pacman -Sy --needed --noconfirm git cmake make ninja gettext curl \
+        gcc libtool autoconf automake pkg-config \
+        unzip libunibilium msgpack-c libvterm \
+        luajit lua
       ;;
     zypper)
       $SUDO zypper refresh
-      $SUDO zypper install -y neovim
+      $SUDO zypper install -y git cmake make ninja gettext curl \
+        gcc gcc-c++ libtool autoconf automake pkg-config \
+        unzip libunibilium-devel msgpack-devel libvterm-devel \
+        luajit-devel lua-devel
       ;;
   esac
+}
+
+install_nvim() {
+  need_sudo
+  local build_dir=""
+  
+  install_build_dependencies
+  
+  build_dir="$(mktemp -d)"
+  trap "rm -rf ${build_dir}" EXIT
+  
+  log "Cloning Neovim repository..."
+  if ! git clone --depth 1 https://github.com/neovim/neovim.git "${build_dir}"; then
+    die "Failed to clone Neovim repository"
+  fi
+  
+  cd "${build_dir}"
+  
+  log "Building Neovim (this may take a while)..."
+  if ! make CMAKE_BUILD_TYPE=RelWithDebInfo; then
+    die "Failed to build Neovim"
+  fi
+  
+  log "Installing Neovim..."
+  $SUDO make install
+  
+  cd - >/dev/null
 }
 
 check_version() {
