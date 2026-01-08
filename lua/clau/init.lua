@@ -1,3 +1,4 @@
+require("clau.set")
 require("clau.lazy")
 require("clau.remap")
 require("clau.telescope")
