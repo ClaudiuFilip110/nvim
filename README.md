@@ -10,8 +10,8 @@ bash <(curl -fsSL https://raw.githubusercontent.com/ClaudiuFilip110/nvim/main/sc
 
 What the script does:
 
-- Installs Neovim plus required helpers (`git`, `curl`, `ripgrep`, `fzf`, build tools) for apt, dnf, pacman, or zypper based distros.
-- Installs the latest upstream Neovim release into `/usr/local/nvim-linux64` and symlinks it to `/usr/local/bin/nvim`, so you always get the newest version regardless of distro package lag.
+- Installs Neovim plus required helpers (`git`, `curl`, `ripgrep`, `fzf`, build tools) via apt, dnf, pacman, or zypper. When using apt on Ubuntu/Linux Mint it automatically enables the official Neovim PPA to keep the version current.
+- Verifies the installed Neovim version is `>= 0.8` so Lazy.nvim and your config load correctly.
 - Backs up any existing `~/.config/nvim` that does not point to this repo.
 - Clones or updates the repo and runs `Lazy! sync` headlessly so plugins are installed.
 

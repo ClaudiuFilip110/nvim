@@ -53,7 +53,7 @@ install_dependencies() {
   case "${PKG_MANAGER}" in
     apt)
       $SUDO apt-get update -y
-      $SUDO apt-get install -y git curl ripgrep fzf build-essential unzip
+      $SUDO apt-get install -y git curl ripgrep fzf build-essential unzip software-properties-common
       ;;
     dnf)
       $SUDO dnf install -y git curl ripgrep fzf gcc make unzip
@@ -71,22 +71,80 @@ install_dependencies() {
   esac
 }
 
-install_latest_nvim() {
+install_nvim_package() {
+  detect_package_manager
   need_sudo
-  local tmp_dir
-  tmp_dir="$(mktemp -d)"
-  trap 'rm -rf "${tmp_dir}"' RETURN
+  case "${PKG_MANAGER}" in
+    apt)
+      $SUDO apt-get install -y neovim
+      ;;
+    dnf)
+      $SUDO dnf install -y neovim
+      ;;
+    pacman)
+      $SUDO pacman -Sy --needed --noconfirm neovim
+      ;;
+    zypper)
+      $SUDO zypper install -y neovim
+      ;;
+    *)
+      die "Package manager ${PKG_MANAGER} is not handled."
+      ;;
+  esac
+}
 
-  local archive="${tmp_dir}/nvim-linux64.tar.gz"
-  log "Downloading latest Neovim release..."
-  curl -fsSL -o "${archive}" https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
-  tar -C "${tmp_dir}" -xzf "${archive}"
+get_nvim_version() {
+  if ! command -v nvim >/dev/null 2>&1; then
+    return
+  fi
 
-  $SUDO rm -rf /usr/local/nvim-linux64
-  $SUDO mv "${tmp_dir}/nvim-linux64" /usr/local/
-  $SUDO ln -sf /usr/local/nvim-linux64/bin/nvim /usr/local/bin/nvim
-  $SUDO ln -sf /usr/local/nvim-linux64/bin/nvim /usr/local/bin/vi
-  log "Installed Neovim to /usr/local/nvim-linux64 (symlinked to /usr/local/bin/nvim)"
+  local version
+  version="$(nvim --version | head -n1 | awk '{print $2}')"
+  version="${version#v}"
+  printf "%s" "${version}"
+}
+
+version_ge() {
+  if [ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]; then
+    return 0
+  fi
+  return 1
+}
+
+ensure_modern_nvim() {
+  detect_package_manager
+  need_sudo
+  local current_version
+  current_version="$(get_nvim_version || true)"
+  if [ -n "${current_version}" ] && version_ge "${current_version}" "0.8.0"; then
+    log "Detected Neovim ${current_version}"
+    return
+  fi
+
+  if [ "${PKG_MANAGER}" = "apt" ]; then
+    local distro=""
+    if command -v lsb_release >/dev/null 2>&1; then
+      distro="$(lsb_release -is 2>/dev/null || echo "")"
+    elif [ -r /etc/os-release ]; then
+      # shellcheck disable=SC1091
+      . /etc/os-release
+      distro="${ID:-}"
+    fi
+    distro="$(printf '%s' "${distro}" | tr '[:upper:]' '[:lower:]')"
+    if [ "${distro}" = "ubuntu" ] || [ "${distro}" = "linuxmint" ]; then
+      warn "Current Neovim ${current_version:-unknown} is too old. Enabling the official Neovim PPA..."
+      $SUDO add-apt-repository -y ppa:neovim-ppa/stable
+      $SUDO apt-get update -y
+      $SUDO apt-get install -y neovim
+      current_version="$(get_nvim_version || true)"
+      if [ -n "${current_version}" ] && version_ge "${current_version}" "0.8.0"; then
+        log "Detected Neovim ${current_version}"
+        return
+      fi
+    fi
+  fi
+
+  die "Neovim version ${current_version:-unknown} is too old. Update your package sources manually."
 }
 
 backup_existing_config() {
@@ -137,7 +195,8 @@ bootstrap_lazy() {
 main() {
   log "Installing base dependencies..."
   install_dependencies
-  install_latest_nvim
+  install_nvim_package
+  ensure_modern_nvim
   backup_existing_config
   sync_repo
   bootstrap_lazy
