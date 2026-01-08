@@ -71,6 +71,48 @@ install_dependencies() {
   esac
 }
 
+get_nvim_version() {
+  if ! command -v nvim >/dev/null 2>&1; then
+    return
+  fi
+
+  local version
+  version="$(nvim --version | head -n1 | awk '{print $2}')"
+  version="${version#v}"
+  printf "%s" "${version}"
+}
+
+version_ge() {
+  # returns success when $1 >= $2
+  if [ "$(printf '%s\n' "$2" "$1" | sort -V | head -n1)" = "$2" ]; then
+    return 0
+  fi
+  return 1
+}
+
+install_nvim_appimage() {
+  need_sudo
+  local tmp="/tmp/nvim.appimage.$$"
+  log "Downloading latest Neovim AppImage..."
+  curl -fsSL -o "${tmp}" https://github.com/neovim/neovim/releases/latest/download/nvim.appimage
+  chmod +x "${tmp}"
+  $SUDO mv "${tmp}" /usr/local/bin/nvim.appimage
+  $SUDO ln -sf /usr/local/bin/nvim.appimage /usr/local/bin/nvim
+  log "Installed Neovim AppImage to /usr/local/bin/nvim"
+}
+
+ensure_modern_nvim() {
+  local current_version
+  current_version="$(get_nvim_version || true)"
+  if [ -n "${current_version}" ] && version_ge "${current_version}" "0.8.0"; then
+    log "Detected Neovim ${current_version}"
+    return
+  fi
+
+  warn "Neovim 0.8+ is required. Installing the official AppImage..."
+  install_nvim_appimage
+}
+
 backup_existing_config() {
   if [ ! -d "${CONFIG_DIR}" ]; then
     return
@@ -119,6 +161,7 @@ bootstrap_lazy() {
 main() {
   log "Installing base dependencies..."
   install_dependencies
+  ensure_modern_nvim
   backup_existing_config
   sync_repo
   bootstrap_lazy
