@@ -62,6 +62,13 @@ install_nvim() {
   log "Installing Neovim..."
   case "${PKG_MANAGER}" in
     apt)
+      # Use unstable PPA for newer versions (>= 0.9.0)
+      if ! grep -q "ppa:neovim-ppa/unstable" /etc/apt/sources.list.d/*.list 2>/dev/null; then
+        log "Adding Neovim unstable PPA for version >= 0.9.0..."
+        $SUDO add-apt-repository -y ppa:neovim-ppa/unstable
+      else
+        log "Neovim unstable PPA already configured"
+      fi
       $SUDO apt-get update -y
       $SUDO apt-get install -y neovim
       ;;
@@ -94,6 +101,18 @@ check_version() {
 }
 
 main() {
+  local current_version
+  current_version="$(get_nvim_version || true)"
+  
+  if [ -n "${current_version}" ] && version_ge "${current_version}" "0.9.0"; then
+    log "Neovim ${current_version} is already installed (>= 0.9.0)"
+    return 0
+  fi
+  
+  if [ -n "${current_version}" ]; then
+    warn "Current Neovim version ${current_version} is too old. Upgrading..."
+  fi
+  
   install_nvim
   check_version
   log "All done. Neovim is ready to use."
