@@ -1,5 +1,5 @@
 vim.g.mapleader = " "
-vim.keymap.set("n", "<leader>pv", vim.cmd("Ex"))
+vim.keymap.set("n", "<leader>pv", "<cmd>Ex<cr>")
 vim.keymap.set("n", "<leader>l", "<cmd>Lazy<cr>", { desc = "Open Lazy.nvim" })
 
 -- Move lines up/down in visual mode
