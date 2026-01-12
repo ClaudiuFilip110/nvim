@@ -62,7 +62,7 @@ require("lazy").setup({
     dependencies = { "williamboman/mason.nvim" },
     config = function()
       require("mason-lspconfig").setup({
-        ensure_installed = { "ruff", "pyright", "ts_ls" },
+        ensure_installed = { "ruff", "pyright", "ts_ls", "jsonls" },
       })
     end,
   },
@@ -74,6 +74,20 @@ require("lazy").setup({
     },
     config = function()
       require("clau.lsp")
+    end,
+  },
+
+  -- Autocomplete
+  {
+    "hrsh7th/nvim-cmp",
+    dependencies = {
+      "L3MON4D3/LuaSnip",
+      "saadparwaiz1/cmp_luasnip",
+      "hrsh7th/cmp-nvim-lsp",
+      "hrsh7th/cmp-buffer",
+    },
+    config = function()
+      require("clau.cmp")
     end,
   },
 })

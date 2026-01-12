@@ -42,7 +42,7 @@ vim.lsp.config("pyright", {
 })
 vim.lsp.enable("pyright")
 
--- JavaScript/TypeScript: ts_ls
+-- JavaScript/TypeScript: ts_ls (works for Chrome extensions)
 vim.lsp.config("ts_ls", {
   on_attach = on_attach,
   settings = {
@@ -71,4 +71,20 @@ vim.lsp.config("ts_ls", {
   },
 })
 vim.lsp.enable("ts_ls")
+
+-- JSON LSP (for manifest.json validation in Chrome extensions)
+vim.lsp.config("jsonls", {
+  on_attach = on_attach,
+  settings = {
+    json = {
+      schemas = {
+        {
+          fileMatch = { "manifest.json" },
+          url = "https://json.schemastore.org/chrome-manifest.json",
+        },
+      },
+    },
+  },
+})
+vim.lsp.enable("jsonls")
 
